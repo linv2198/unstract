@@ -1,0 +1,78 @@
+# Elestio configuration file
+# This file tells Elestio how to build and deploy your application
+
+# Set the Docker Compose file to use
+compose_file: docker-compose.elestio.yaml
+
+# Build configuration
+build:
+  # Command to build the application
+  command: |
+    # Install build dependencies
+    apt-get update
+    apt-get install -y make build-essential python3-pip python3-venv
+    
+    # Install Docker Compose if not already installed
+    if ! command -v docker-compose &> /dev/null; then
+        pip3 install docker-compose
+    fi
+    
+    # Build all services
+    docker-compose -f docker-compose.elestio.yaml build
+
+# Start configuration
+start:
+  # Command to start the application
+  command: |
+    # Start all services
+    docker-compose -f docker-compose.elestio.yaml up -d
+    
+    # Wait for services to be ready
+    sleep 10
+    
+    # Run database migrations
+    docker-compose -f docker-compose.elestio.yaml exec -T backend python manage.py migrate --noinput
+
+# Health check configuration
+healthcheck:
+  # Command to check if the application is healthy
+  command: |
+    # Check if backend is running
+    if ! curl -f http://localhost:8000/health/; then
+        echo "Backend health check failed"
+        exit 1
+    fi
+    
+    # Check if frontend is running
+    if ! curl -f http://localhost:3000; then
+        echo "Frontend health check failed"
+        exit 1
+    fi
+    
+    echo "All services are healthy"
+    exit 0
+
+# Environment variables that should be set in the Elestio dashboard
+required_env_vars:
+  - DJANGO_SECRET_KEY
+  - DB_PASSWORD
+  - REDIS_PASSWORD
+  - RABBITMQ_DEFAULT_PASS
+  - MINIO_ROOT_PASSWORD
+  - WEB_APP_ORIGIN_URL
+
+# Ports that should be exposed
+ports:
+  - 80
+  - 443
+  - 8000
+  - 3000
+  - 3001
+  - 3002
+  - 3003
+  - 3004
+  - 5002
+  - 5555
+  - 9000
+  - 9001
+  - 15672
